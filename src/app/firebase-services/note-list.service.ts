@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
 import { Note } from '../interfaces/note.interface';
-import { Firestore, collection, collectionData, doc, onSnapshot, addDoc } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, onSnapshot, addDoc, updateDoc, deleteDoc } from '@angular/fire/firestore';
 import { elementAt, Observable } from 'rxjs';
+import { Title } from '@angular/platform-browser';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +23,39 @@ export class NoteListService {
  
   }
 
-  async addNote(item: Note){
+  async deleteNote(colId: string, docId: string) {
+    await deleteDoc(this.getSingleDocRef(colId, docId)).catch(
+      (err) => {console.error(err)}
+    ).then()
+  }
+
+  async updateNote(note: Note) {
+    if (note.id) {
+      let docRef = this.getSingleDocRef(this.getColIdFromNote(note), note.id);
+      await updateDoc(docRef, this.getCleanJson(note)).catch(
+        (err) => {console.error(err)}
+      ).then()
+    }
+  }
+
+  getCleanJson(note:Note):{} {
+    return {
+      type: note.type,
+      title: note.title,
+      content: note.content,
+      marked: note.marked,
+    }
+  }
+
+  getColIdFromNote(note:Note):string {
+    if(note.type == 'note') {
+      return 'notes'
+    } else {
+      return 'trash'
+    }
+  }
+
+  async addNote(item: Note, colId: "Notes" | "trash"){
     await addDoc(this.getNotesRef(), item).catch(
       (err) => {console.error(err)}
     ).then(
