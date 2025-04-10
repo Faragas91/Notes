@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Note } from '../interfaces/note.interface';
-import { Firestore, collection, collectionData, doc, onSnapshot, addDoc, updateDoc, deleteDoc } from '@angular/fire/firestore';
+import { query, orderBy, limit, Firestore, collection, collectionData, doc, onSnapshot, addDoc, updateDoc, deleteDoc, where } from '@angular/fire/firestore';
 import { elementAt, Observable } from 'rxjs';
 import { Title } from '@angular/platform-browser';
 
@@ -20,7 +20,6 @@ export class NoteListService {
   constructor() { 
     this.unsubTrash = this.subTrashList();
     this.unsubNotes = this.subNotesList();
- 
   }
 
   async deleteNote(colId: string, docId: string) {
@@ -88,6 +87,7 @@ export class NoteListService {
   }
 
   subNotesList () {
+    const q = query(this.getNotesRef(), orderBy("title") ,limit(3));
     return onSnapshot(this.getNotesRef(), (list) => {
       this.normalNotes = [];
       list.forEach(element => {
