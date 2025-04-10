@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Note } from '../interfaces/note.interface';
-import { Firestore, collection, collectionData, doc, onSnapshot } from '@angular/fire/firestore';
+import { Firestore, collection, collectionData, doc, onSnapshot, addDoc } from '@angular/fire/firestore';
 import { elementAt, Observable } from 'rxjs';
 
 @Injectable({
@@ -11,38 +11,61 @@ export class NoteListService {
   trashNotes: Note[] = [];
   normalNotes: Note[] = [];
 
-  items$;
-  items;
-
-  unsubList;
-  unsubSingle;
+  unsubTrash;
+  unsubNotes;
 
   firestore: Firestore = inject(Firestore);
 
   constructor() { 
-    this.unsubList = onSnapshot(this.getNotesRef(), (list) => {
-      list.forEach(element => {
-        console.log(element);
-      })
-    })
-    
-    this.unsubSingle = onSnapshot(this.getSingleDocRef("notes", ""), (element) => {
-    })
-
-    this.unsubSingle();
-    this.unsubList();
-    
-    this.items$ = collectionData(this.getNotesRef());  
-    this.items = this.items$.subscribe( (list) => {
-      list.forEach(element => {
-        console.log(element);
-      })
-    })
-    this.items.unsubcribe();
+    this.unsubTrash = this.subTrashList();
+    this.unsubNotes = this.subNotesList();
+ 
   }
 
+  async addNote(item: {}){
+    await addDoc(this.getNotesRef(), item).catch(
+      (err) => {console.error(err)}
+    ).then(
+      (docRef) => {console.log("Document wirtten with ID: ", docRef?.id)}
+    )
+  }
+
+  setNoteObject(obj: any, id:string): Note {
+    return {
+      id: id,
+      type: obj.type || "note",
+      title: obj.title || "",
+      content: obj.content || "",
+      marked: obj.marked || false,
+    }
+  }
+ 
+  ngOnDestroy() {
+    this.unsubNotes?.();
+    this.unsubTrash?.();
+  }
+
+  subTrashList() {
+    return onSnapshot(this.getNotesRef(), (list) => {
+      this.trashNotes = [];
+      list.forEach(element => {
+        this.trashNotes.push(this.setNoteObject(element.data(), element.id));
+      })
+    })
+  }
+
+  subNotesList () {
+    return onSnapshot(this.getNotesRef(), (list) => {
+      this.normalNotes = [];
+      list.forEach(element => {
+        this.normalNotes.push(this.setNoteObject(element.data(), element.id));
+      })
+    })
+  }
+  
+
   getNotesRef() {
-    return collection(this.firestore, 'notes');
+    return collection(this.firestore, 'Notes');
   }
 
   getTrashRef() {
@@ -50,7 +73,8 @@ export class NoteListService {
   } 
 
   getSingleDocRef(colId: string, docId: string) {
-    return doc(collection(this.firestore, colId), docId);
-  } 
+    return doc(this.firestore, `${colId}/${docId}`);
+  }
+  
   
 }
